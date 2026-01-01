@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro OX Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #1a1a2e;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            background: #16213e;
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .cell {
+            width: 90px;
+            height: 90px;
+            background: #0f3460;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        .cell:hover {
+            background: #1a1a2e;
+            transform: scale(1.02);
+        }
+        .cell.taken {
+            cursor: default;
+        }
+        .symbol-o {
+            width: 60px;
+            height: 60px;
+            background: #f9d423; /* Character Yellow */
+            border-radius: 50%;
+            position: relative;
+            box-shadow: 0 4px 0 #d4b102;
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .symbol-o::after {
+            content: '● ●';
+            color: #1a1a2e;
+            font-size: 10px;
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            letter-spacing: 2px;
+        }
+        .symbol-x {
+            width: 60px;
+            height: 60px;
+            position: relative;
+            animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .symbol-x::before, .symbol-x::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 60px;
+            background: #e94560; /* Character Red */
+            left: 25px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(233, 69, 96, 0.5);
+        }
+        .symbol-x::before { transform: rotate(45deg); }
+        .symbol-x::after { transform: rotate(-45deg); }
+
+        @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        .win-line {
+            background: #4ecca3 !important;
+            transform: scale(1.05);
+        }
+
+        #status {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #f9d423;
+        }
+
+        .btn-reset {
+            margin-top: 30px;
+            padding: 12px 30px;
+            background: #e94560;
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-reset:hover {
+            background: #ff4b2b;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="status">Player O's Turn</div>
+
+    <div class="grid-container" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+    </div>
+
+    <button class="btn-reset" onclick="resetGame()">RESET GAME</button>
+
+    <script>
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'O'; // O is the yellow character
+        let gameActive = true;
+        const statusDisplay = document.getElementById('status');
+        const cells = document.querySelectorAll('.cell');
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Cols
+            [0, 4, 8], [2, 4, 6]             // Diagonals
+        ];
+
+        function handleCellClick(e) {
+            const clickedCell = e.target.closest('.cell');
+            const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+            if (board[clickedCellIndex] !== '' || !gameActive) return;
+
+            updateCell(clickedCell, clickedCellIndex);
+            checkResult();
+        }
+
+        function updateCell(cell, index) {
+            board[index] = currentPlayer;
+            cell.classList.add('taken');
+            
+            const icon = document.createElement('div');
+            icon.className = currentPlayer === 'O' ? 'symbol-o' : 'symbol-x';
+            cell.appendChild(icon);
+        }
+
+        function checkResult() {
+            let roundWon = false;
+            let winningLine = [];
+
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    roundWon = true;
+                    winningLine = [a, b, c];
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                statusDisplay.innerText = `Player ${currentPlayer} Wins!`;
+                statusDisplay.style.color = currentPlayer === 'O' ? '#f9d423' : '#e94560';
+                gameActive = false;
+                winningLine.forEach(index => {
+                    cells[index].classList.add('win-line');
+                });
+                return;
+            }
+
+            if (!board.includes('')) {
+                statusDisplay.innerText = "It's a Draw!";
+                statusDisplay.style.color = "white";
+                gameActive = false;
+                return;
+            }
+
+            currentPlayer = currentPlayer === 'O' ? 'X' : 'O';
+            statusDisplay.innerText = `Player ${currentPlayer}'s Turn`;
+            statusDisplay.style.color = currentPlayer === 'O' ? '#f9d423' : '#e94560';
+        }
+
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            currentPlayer = 'O';
+            statusDisplay.innerText = "Player O's Turn";
+            statusDisplay.style.color = '#f9d423';
+            cells.forEach(cell => {
+                cell.innerHTML = '';
+                cell.classList.remove('taken', 'win-line');
+            });
+        }
+
+        cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+    </script>
+</body>
+</html>
+
